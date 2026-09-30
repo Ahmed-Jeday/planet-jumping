@@ -896,14 +896,7 @@
 <body>
   <main class="experience" data-planet="mars">
     <div class="backgrounds" aria-hidden="true">
-      <video id="mercury-background" class="background" src="/assets/to-Mercury.mp4" muted playsinline preload="auto"></video>
-      <video id="venus-background" class="background" src="/assets/to-venus.mp4" muted playsinline preload="auto"></video>
-      <video id="earth-background" class="background" src="/assets/to-earth.mp4" muted playsinline preload="auto"></video>
-      <video id="mars-background" class="background is-visible" src="/assets/mars-background.mp4" muted playsinline preload="auto"></video>
-      <video id="jupiter-background" class="background" src="/assets/to-Jupiter.mp4" muted playsinline preload="auto"></video>
-      <video id="saturn-background" class="background" src="/assets/to-Saturn.mp4" muted playsinline preload="auto"></video>
-      <video id="uranus-background" class="background" src="/assets/to-Uranus.mp4" muted playsinline preload="auto"></video>
-      <video id="neptune-background" class="background" src="/assets/to-Neptune.mp4" muted playsinline preload="auto"></video>
+      <video id="mars-background" class="background is-visible" src="/assets/mars-background.mp4" muted playsinline loop preload="none"></video>
     </div>
     <div class="preloader" id="preloader" aria-label="Loading Solar Odyssey">
       <div class="preloader-shade"></div>
@@ -940,7 +933,7 @@
         <span><span id="next-number">[03]</span> <strong id="next-name">Earth</strong></span>
       </div>
       <button class="portal" id="portal" type="button" aria-label="Travel to next destination" title="Click or Press Space to Warp" >
-        <video id="portal-video" src="/assets/to-earth.mp4" muted playsinline preload="auto" ></video>
+        <video id="portal-video" src="/assets/to-earth.mp4" muted playsinline preload="none"></video>
         <img id="portal-image" src="/assets/mercury.jpg" alt="Mercury">
       </button>
     </section>
@@ -960,7 +953,7 @@
       <dl id="facts"></dl>
     </section>
 
-    <div class="transition-layer" aria-hidden="true"><video id="transition-video" muted playsinline preload="auto" crossorigin="anonymous"></video></div>
+    <div class="transition-layer" aria-hidden="true"><video id="transition-video" muted playsinline preload="none" crossorigin="anonymous"></video></div>
     <div class="loading" aria-hidden="true">Calculating Orbital Vector…</div>
     <div class="custom-cursor" aria-hidden="true">
       <span class="cursor-orbit"></span><span class="cursor-dot"></span><span class="cursor-label">Warp</span>
