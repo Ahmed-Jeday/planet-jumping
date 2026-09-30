@@ -1,0 +1,2471 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Planet Jumping — Interactive Solar System Exploration</title>
+  <meta name="description" content="Immersive space portal experience through the Solar System. Explore Mercury to Neptune with 3D canvas portals, real-time planetary comparisons, and NASA/ESA scientific data.">
+  <meta name="theme-color" content="#090807">
+  <meta name="author" content="Ubernatural & NASA/ESA Data Archive">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23090807' stroke='%23ffffff' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='6' fill='%23ffffff'/%3E%3C/svg%3E">
+
+  <!-- Open Graph / Social Cards -->
+  <meta property="og:title" content="Planet Jumping — Interactive Solar System Exploration">
+  <meta property="og:description" content="Cinematic interplanetary journey with canvas-driven 3D portals, planetary comparisons, and verified NASA/ESA astrophysics metrics.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="/assets/mercury.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Planet Jumping — Solar System Explorer">
+  <meta name="twitter:description" content="Travel across all 8 planets with smooth canvas perspective projection and educational dossiers.">
+
+  <!-- Schema.org JSON-LD -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Planet Jumping",
+    "applicationCategory": "EducationalApplication",
+    "genre": "Astronomy & Space Exploration",
+    "browserRequirements": "Requires HTML5 Canvas and WebGL or Modern Browser",
+    "description": "An interactive 3D portal experience exploring the eight planets of the Solar System with verified scientific data from NASA and ESA."
+  }
+  </script>
+
+  <style>
+    @font-face {
+      font-family: 'SF Pro';
+      font-weight: 400;
+      src: local('SF Pro Text'), local('SF Pro'), local('SFProText-Regular');
+    }
+    @font-face {
+      font-family: 'SF Pro';
+      font-weight: 700;
+      src: local('SF Pro Text Bold'), local('SF Pro Bold'), local('SFProText-Bold');
+    }
+    @font-face {
+      font-family: 'SF Pro Thin';
+      font-weight: 100;
+      src: local('SF Pro Display Thin'), local('SF Pro Thin');
+    }
+    @font-face {
+      font-family: 'Aalto';
+      font-weight: 400;
+      src: local('Aalto');
+    }
+
+
+
+    :root {
+      font-family: 'SF Pro', Arial, sans-serif;
+      color: #fff;
+      background: #090807;
+      font-synthesis: none;
+      --accent: #ffffff;
+      --accent-dim: rgba(255, 255, 255, 0.45);
+      --glass-bg: rgba(20, 18, 16, 0.72);
+      --glass-border: rgba(255, 255, 255, 0.2);
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #090807;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    #planet-title{
+      font-family: Aalto, 'Arial Narrow', sans-serif;
+      font-size: clamp(118px, 20vw, 150px);
+      font-weight: 400;
+      line-height: .72;
+      margin: 0 0 -.04em;
+      letter-spacing: 0;
+      transform: translateX(-32px);
+      opacity: 0;
+      text-transform: uppercase;
+    }
+
+    /* Custom cursor (disabled on touch devices) */
+    @media (hover: hover) and (pointer: fine) {
+      html, body, button, a, .portal {
+        cursor: none !important;
+      }
+    }
+
+    .experience {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      min-height: 540px;
+      overflow: hidden;
+      background: #0a0908;
+    }
+
+    .backgrounds, .background, .shade, .transition-layer, .transition-layer video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+    .background {
+      object-fit: cover;
+      opacity: 0;
+      transition: opacity .8s ease;
+    }
+    .background.is-visible {
+      opacity: 1;
+    }
+    .shade {
+      z-index: 1;
+      background: linear-gradient(to bottom, transparent 52%, rgba(0, 0, 0, .88) 100%);
+      pointer-events: none;
+    }
+    .chrome {
+      position: absolute;
+      z-index: 4;
+      transition: opacity .45s ease, filter .45s ease;
+    }
+    .experience.is-transitioning .chrome {
+      opacity: 0;
+      filter: blur(8px);
+      pointer-events: none;
+    }
+
+    /* HEADER */
+    .header {
+      left: clamp(18px, 1.95vw, 28px);
+      right: clamp(18px, 1.95vw, 28px);
+      top: clamp(18px, 3.1vh, 28px);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+    .header-actions {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .nav {
+      display: flex;
+      align-items: center;
+      height: 42px;
+      padding: 4px 5px;
+      border: 1px solid rgba(255, 255, 255, .45);
+      background: rgba(255, 255, 255, .1);
+      backdrop-filter: blur(12px);
+      border-radius: 999px;
+    }
+    .nav a, .nav button {
+      color: #fff;
+      text-decoration: none;
+      padding: 8px 18px;
+      border-radius: 999px;
+      line-height: 1;
+      font-size: 14px;
+      background: transparent;
+      border: 0;
+      cursor: pointer;
+      transition: background .2s, color .2s;
+    }
+    .nav a.active, .nav button.active, .nav a:hover, .nav button:hover {
+      background: #fff;
+      color: #000;
+    }
+
+    .audio-btn, .eco-badge {
+      height: 42px;
+      padding: 0 16px;
+      border: 1px solid rgba(255, 255, 255, .3);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .08);
+      backdrop-filter: blur(10px);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .audio-btn:hover, .eco-badge:hover {
+      background: rgba(255, 255, 255, .2);
+      border-color: #fff;
+    }
+    .audio-btn.is-active {
+      border-color: #55ff99;
+      color: #77ffaa;
+    }
+
+    .menu {
+      height: 42px;
+      padding: 0 20px;
+      border: 0;
+      border-radius: 999px;
+      background: #fff;
+      color: #000;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: transform .2s, background .2s;
+    }
+    .menu:hover {
+      transform: scale(1.04);
+    }
+
+    /* SIDEBAR */
+    .planet-list {
+      left: clamp(18px, 1.95vw, 28px);
+      top: 50%;
+      transform: translateY(-43%);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 16px;
+      padding: 0;
+      margin: 0;
+      list-style: none;
+    }
+    .planet-item {
+      display: flex;
+      align-items: center;
+      min-height: 24px;
+      color: rgba(255, 255, 255, .6);
+      user-select: none;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 6px;
+      transition: color .2s, transform .2s;
+      background: none;
+      border: none;
+      font-family: inherit;
+      text-align: left;
+    }
+    .planet-item:hover {
+      color: #fff;
+      transform: translateX(4px);
+    }
+    .planet-item.active {
+      font-size: 18px;
+      font-weight: 700;
+      gap: 8px;
+      color: #fff;
+    }
+    .planet-item.active:before {
+      content: '';
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #fff;
+      display: inline-block;
+      flex-shrink: 0;
+      box-shadow: 0 0 12px rgba(255, 255, 255, 0.8);
+    }
+
+    /* PORTAL */
+    .portal-wrap {
+      left: 50%;
+      top: 50%;
+      width: min(320px, 31vw);
+      transform: translate(-50%, -54%);
+      perspective: none;
+      
+    }
+    .portal-heading {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      font-size: 16px;
+      opacity: 0;
+      
+    }
+    .portal-heading strong {
+      font-size: 18px;
+      margin-left: 8px;
+    }
+    .portal {
+      position: relative;
+      display: block;
+      width: 100%;
+      aspect-ratio: 320/350;
+      padding: 0;
+      overflow: visible;
+      border: 0;
+      border-radius: 90px;
+      background: transparent;
+      cursor: pointer;
+      box-shadow: none;
+      transform: none !important;
+      outline: none;
+    }
+    .portal:focus-visible {
+      outline: 2px solid #fff;
+      outline-offset: 8px;
+    }
+    .portal video, .portal img {
+      visibility: hidden;
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      pointer-events: none;
+    }
+    .portal-canvas {
+      opacity:1;
+      position: fixed;
+      inset: 0;
+      z-index: 3;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    /* CONTENT */
+    .planet-content {
+      left: clamp(28px, 4vw, 58px);
+      right: clamp(28px, 3vw, 44px);
+      bottom: clamp(24px, 3vh, 30px);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 40px;
+    }
+    .planet-hero {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .planet-content h1 {
+      font-family: Aalto, 'Arial Narrow', sans-serif;
+      font-size: clamp(118px, 20vw, 300px);
+      font-weight: 400;
+      line-height: .72;
+      margin: 0 0 -.04em;
+      letter-spacing: 0;
+      transform: translateX(-32px);
+      opacity: 0;
+      text-transform: uppercase;
+    }
+    .planet-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 8px;
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity .4s ease, transform .4s ease;
+    }
+    .content-revealing .planet-actions {
+      opacity: 1;
+      transform: translateY(0);
+      transition-delay: .7s;
+    }
+    .btn-dossier, .btn-compare {
+      padding: 8px 18px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, .15);
+      border: 1px solid rgba(255, 255, 255, .4);
+      color: #fff;
+      backdrop-filter: blur(10px);
+      transition: all .2s;
+    }
+    .btn-dossier:hover, .btn-compare:hover {
+      background: #fff;
+      color: #000;
+      border-color: #fff;
+      transform: translateY(-2px);
+    }
+
+    .planet-content dl {
+      width: min(447px, 34vw);
+      margin: 0;
+      font-size: 16px;
+    }
+    .fact {
+      display: grid;
+      grid-template-columns: 138px 1fr;
+      gap: 18px;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, .48);
+      opacity: 0;
+    }
+    .fact:last-child {
+      border-bottom: 0;
+    }
+    .fact dt {
+      font-weight: 700;
+    }
+    .fact dd {
+      margin: 0;
+      color: rgba(255, 255, 255, .9);
+    }
+
+    /* MISC & TRANSITIONS */
+    .transition-layer { display: none; }
+    .scene-canvas { display: none; }
+    .loading {
+      position: absolute;
+      z-index: 12;
+      left: 50%;
+      bottom: 30px;
+      transform: translateX(-50%);
+      opacity: 0;
+      font-size: 12px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      transition: opacity .2s;
+      pointer-events: none;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 6px 16px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .experience.is-loading .loading { opacity: .9; }
+    .experience.is-transitioning .header,
+    .experience.is-transitioning .planet-list {
+      opacity: 1;
+      filter: none;
+      pointer-events: auto;
+    }
+    .experience.is-transitioning .shade { opacity: 1; }
+    .experience.is-committing .background { transition: none !important; }
+
+    /* PRELOADER */
+    .preloader {
+      position: absolute;
+      inset: 0;
+      z-index: 20;
+      background: #000;
+      overflow: hidden;
+    }
+    .preloader video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .preloader-shade {
+      position: absolute;
+      inset: auto 0 0;
+      height: 35%;
+      background: linear-gradient(to bottom, transparent, #000);
+    }
+    .preloader.is-background {
+      z-index: 0;
+    }
+    .preloader.is-background .preloader-shade {
+      opacity: 0;
+    }
+    .floating-logo {
+      position: fixed;
+      z-index: 22;
+      left: 50%;
+      top: 50%;
+      width: 59px;
+      height: 58px;
+      transform: translate(-50%, -50%);
+      will-change: left, top, width, height, transform;
+      transition:
+        left 2s cubic-bezier(.16, 1, .3, 1),
+        top 2s cubic-bezier(.16, 1, .3, 1),
+        width 2s cubic-bezier(.16, 1, .3, 1),
+        height 2s cubic-bezier(.16, 1, .3, 1),
+        transform 2s cubic-bezier(.16, 1, .3, 1);
+    }
+    .floating-logo.is-docked {
+      left: clamp(18px, 1.95vw, 28px);
+      top: clamp(18px, 3.1vh, 28px);
+      width: 37px;
+      height: 36px;
+      transform: none;
+    }
+    .floating-logo.is-settled {
+      z-index: 5;
+    }
+    .preloader-count {
+      position: fixed;
+      z-index: 22;
+      left: 50%;
+      bottom: clamp(22px, 3.1vh, 28px);
+      display: flex;
+      align-items: flex-end;
+      gap: 4px;
+      transform: translateX(-50%);
+      font-family: 'SF Pro', Arial, sans-serif;
+      line-height: 1;
+    }
+    .preloader-count > span:first-child {
+      font-family: 'SF Pro Thin', 'SF Pro', Arial, sans-serif;
+      font-size: 64px;
+      font-weight: 100;
+    }
+    .preloader-count .percent {
+      font-size: 24px;
+      padding-bottom: 4px;
+    }
+    .preloader-count.is-leaving {
+      animation: preload-count-out .75s cubic-bezier(.22, 1, .36, 1) both;
+    }
+    @keyframes preload-count-out {
+      to {
+        opacity: 0;
+        filter: blur(7px);
+        transform: translate(-50%, -34px);
+      }
+    }
+    body:not(.preload-complete) .custom-cursor {
+      opacity: 0 !important;
+    }
+
+    /* CUSTOM CURSOR */
+    .custom-cursor {
+      display: block;
+      position: fixed;
+      left: 0;
+      top: 0;
+      z-index: 100;
+      width: 1px;
+      height: 1px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .2s ease;
+    }
+    .custom-cursor.is-visible {
+      opacity: 1;
+    }
+    .cursor-dot, .cursor-orbit {
+      position: absolute;
+      left: 0;
+      top: 0;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .cursor-dot {
+      width: 12px;
+      height: 12px;
+      background: #fff;
+    }
+    .cursor-orbit {
+      width: 36px;
+      height: 36px;
+      border: 1px solid #fff;
+      background: rgba(255, 255, 255, .4);
+      transition: transform .3s cubic-bezier(.22, 1, .36, 1);
+    }
+    .custom-cursor.is-enter .cursor-orbit {
+      transform: translate(-50%, -50%) scale(1.16);
+    }
+    .cursor-label {
+      position: absolute;
+      top: 26px;
+      left: 0;
+      transform: translateX(-50%) translateY(-4px);
+      font: 16px/1.2 'SF Pro', Arial, sans-serif;
+      white-space: nowrap;
+      opacity: 0;
+      transition: opacity .2s ease, transform .3s cubic-bezier(.22, 1, .36, 1);
+    }
+    .custom-cursor.is-enter .cursor-label {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ANIMATIONS */
+    body:not(.intro-ready) .header,
+    body:not(.intro-ready) .planet-list,
+    body:not(.intro-ready) .planet-content h1,
+    body:not(.intro-ready) .planet-content .fact {
+      opacity: 0;
+    }
+    .intro-ready .header {
+      animation: reveal-down .9s cubic-bezier(.22, 1, .36, 1) .1s both;
+    }
+    .intro-ready .planet-list {
+      animation: reveal-side .9s cubic-bezier(.22, 1, .36, 1) .65s both;
+    }
+    .content-revealing h1 {
+      animation: title-rise 1.05s cubic-bezier(.16, 1, .3, 1) both;
+    }
+    .content-revealing .fact {
+      animation: fact-rise .72s cubic-bezier(.22, 1, .36, 1) both;
+    }
+    .content-revealing .fact:nth-child(1) { animation-delay: .52s; }
+    .content-revealing .fact:nth-child(2) { animation-delay: .68s; }
+    .content-revealing .fact:nth-child(3) { animation-delay: .84s; }
+    .content-revealing .fact:nth-child(4) { animation-delay: 1.0s; }
+
+    .mask-revealing .portal-heading {
+      animation: portal-caption .85s cubic-bezier(.22, 1, .36, 1) both;
+    }
+    .planet-list.is-switching .planet-item {
+      animation: menu-row .58s cubic-bezier(.22, 1, .36, 1) both;
+    }
+    .planet-list.is-switching .planet-item:nth-child(1) { animation-delay: .02s; }
+    .planet-list.is-switching .planet-item:nth-child(2) { animation-delay: .05s; }
+    .planet-list.is-switching .planet-item:nth-child(3) { animation-delay: .08s; }
+    .planet-list.is-switching .planet-item:nth-child(4) { animation-delay: .11s; }
+    .planet-list.is-switching .planet-item:nth-child(5) { animation-delay: .14s; }
+    .planet-list.is-switching .planet-item:nth-child(6) { animation-delay: .17s; }
+    .planet-list.is-switching .planet-item:nth-child(7) { animation-delay: .2s; }
+    .planet-list.is-switching .planet-item:nth-child(8) { animation-delay: .23s; }
+
+    .planet-list.is-switching .planet-item.active:before {
+      animation: active-dot .55s cubic-bezier(.22, 1, .36, 1) .18s both;
+    }
+
+    @keyframes reveal-down {
+      from { opacity: 0; filter: blur(8px); transform: translateY(-18px); }
+      to { opacity: 1; filter: blur(0); transform: translateY(0); }
+    }
+    @keyframes reveal-side {
+      from { opacity: 0; filter: blur(8px); transform: translate(-20px, -43%); }
+      to { opacity: 1; filter: blur(0); transform: translate(0, -43%); }
+    }
+    @keyframes title-rise {
+      from { opacity: 0; filter: blur(12px); transform: translate(-32px, 42px); }
+      to { opacity: 1; filter: blur(0); transform: translate(-32px, 0); }
+    }
+    @keyframes fact-rise {
+      from { opacity: 0; filter: blur(7px); transform: translateY(18px); }
+      to { opacity: 1; filter: blur(0); transform: translateY(0); }
+    }
+    @keyframes portal-caption {
+      from { opacity: 0; filter: blur(7px); transform: translateY(22px); }
+      to { opacity: 1; filter: blur(0); transform: translateY(0); }
+    }
+    @keyframes menu-row {
+      from { opacity: .35; transform: translateX(-8px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes active-dot {
+      from { opacity: 0; transform: scale(0); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    /* OVERLAYS & MODALS (Dossier, About, Planets Directory, Settings) */
+    .app-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      background: rgba(6, 5, 4, 0.85);
+      backdrop-filter: blur(16px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: clamp(16px, 4vw, 40px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .35s ease, transform .35s ease;
+    }
+    .app-overlay.is-open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .overlay-card {
+      width: 100%;
+      max-width: 900px;
+      max-height: 90vh;
+      overflow-y: auto;
+      background: #110f0d;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 24px;
+      padding: clamp(24px, 3.5vw, 40px);
+      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8);
+      position: relative;
+    }
+    .overlay-close {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 18px;
+      transition: background .2s, transform .2s;
+    }
+    .overlay-close:hover {
+      background: #fff;
+      color: #000;
+      transform: scale(1.1);
+    }
+    .overlay-title {
+      font-size: 28px;
+      font-weight: 700;
+      margin: 0 0 8px;
+      letter-spacing: -0.02em;
+    }
+    .overlay-subtitle {
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 15px;
+      margin: 0 0 28px;
+    }
+
+    /* Comparison Component */
+    .compare-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin: 20px 0;
+    }
+    .compare-card {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 16px;
+      padding: 20px;
+    }
+    .compare-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .compare-selector {
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .compare-metric {
+      margin-bottom: 14px;
+    }
+    .compare-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.7);
+      margin-bottom: 4px;
+    }
+    .compare-bar-track {
+      height: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .compare-bar-fill {
+      height: 100%;
+      background: #fff;
+      border-radius: 999px;
+      transition: width .5s cubic-bezier(.16, 1, .3, 1);
+    }
+
+    /* Planet Directory Grid */
+    .planet-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
+    }
+    .planet-card {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 16px;
+      cursor: pointer;
+      text-align: left;
+      transition: all .2s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      color: inherit;
+    }
+    .planet-card:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: #fff;
+      transform: translateY(-4px);
+    }
+    .planet-card.is-current {
+      border-color: #fff;
+      background: rgba(255, 255, 255, 0.15);
+    }
+    .planet-card-number {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.5);
+      font-weight: 700;
+    }
+    .planet-card-name {
+      font-size: 18px;
+      font-weight: 700;
+      margin: 0;
+    }
+    .planet-card-stat {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    /* Settings & Controls */
+    .settings-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    .settings-row:last-child {
+      border-bottom: 0;
+    }
+    .settings-info h4 {
+      margin: 0 0 4px;
+      font-size: 16px;
+    }
+    .settings-info p {
+      margin: 0;
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    /* Educational Sources Footnote */
+    .sources-box {
+      margin-top: 30px;
+      padding: 16px 20px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.6);
+      line-height: 1.6;
+    }
+    .sources-box strong {
+      color: #fff;
+    }
+
+    /* RESPONSIVE */
+    @media(max-width: 900px) {
+      .nav { display: none; }
+      .portal-wrap { width: min(300px, 48vw); }
+      .planet-content h1 { font-size: clamp(105px, 24vw, 190px); }
+      .planet-content dl { width: 43vw; }
+      .fact { grid-template-columns: 110px 1fr; }
+      .planet-list { font-size: 14px; }
+      .planet-item.active { font-size: 16px; }
+      .compare-container { grid-template-columns: 1fr; }
+    }
+    @media(max-width: 640px) {
+      .experience { min-height: 600px; }
+      .planet-list { display: none; }
+      .portal-wrap { top: 44%; width: min(260px, 66vw); }
+      .planet-content { left: 18px; right: 18px; bottom: 18px; display: block; }
+      .planet-content h1 { font-size: clamp(86px, 28vw, 150px); margin-bottom: 16px; }
+      .planet-content dl { width: 100%; font-size: 13px; }
+      .fact { grid-template-columns: 92px 1fr; padding: 5px 0; }
+      .portal-heading { font-size: 14px; }
+      .portal-heading strong { font-size: 16px; }
+      .menu { height: 38px; }
+      .portal { border-radius: 70px; }
+      .header-actions { gap: 6px; }
+      .audio-btn, .eco-badge { height: 38px; padding: 0 12px; font-size: 12px; }
+    }
+    @media(prefers-reduced-motion: reduce) {
+      * { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+      .portal { transform: none !important; }
+    }
+    
+
+    /* Low performance mode */
+    body.is-eco-mode .shade, body.is-eco-mode .nav, body.is-eco-mode .app-overlay {
+      backdrop-filter: none !important;
+    }
+    body.is-eco-mode * {
+      filter: none !important;
+    }
+  </style>
+</head>
+<body>
+  <main class="experience" data-planet="mars">
+    <div class="backgrounds" aria-hidden="true">
+      <video id="mars-background" class="background is-visible" src="/assets/mars-background.mp4" muted playsinline loop preload="none"></video>
+    </div>
+    <div class="preloader" id="preloader" aria-label="Loading Solar Odyssey">
+      <div class="preloader-shade"></div>
+    </div>
+    <img class="floating-logo" id="floating-logo" src="/assets/logo.svg" alt="Ubernatural">
+    <div class="preloader-count" id="preloader-count" aria-live="polite">
+      <span id="preloader-value">0</span><span class="percent">%</span>
+    </div>
+    <canvas id="scene-canvas" class="scene-canvas" aria-hidden="true"></canvas>
+    <div class="shade" aria-hidden="true"></div>
+
+    <header class="header chrome">
+      <div class="header-actions">
+        <button class="audio-btn" id="audio-toggle" type="button" aria-label="Toggle ambient cosmic audio" title="Shortcut: Press M">
+          <span id="audio-icon">🔇</span>
+          <span id="audio-label">Sound OFF</span>
+        </button>
+        <nav class="nav" aria-label="Primary navigation">
+          <a class="active" href="#explore" id="nav-explore">Explore</a>
+          <button type="button" id="nav-planets">Planets</button>
+          <button type="button" id="nav-compare">Compare</button>
+          <button type="button" id="nav-about">About</button>
+        </nav>
+        <button class="menu" id="menu-btn" type="button" aria-label="Open settings and shortcuts menu">Menu</button>
+      </div>
+    </header>
+
+    <aside class="planet-list chrome" aria-label="Planetary System Navigation"></aside>
+
+    <canvas id="portal-canvas" class="portal-canvas" aria-hidden="true"></canvas>
+    <section class="portal-wrap chrome" aria-label="Next destination">
+      <div class="portal-heading">
+        <span>Next:</span>
+        <span><span id="next-number">[03]</span> <strong id="next-name">Earth</strong></span>
+      </div>
+      <button class="portal" id="portal" type="button" aria-label="Travel to next destination" title="Click or Press Space to Warp" >
+        <video id="portal-video" src="/assets/to-earth.mp4" muted playsinline preload="none"></video>
+        <img id="portal-image" src="/assets/mercury.jpg" alt="Mercury">
+      </button>
+    </section>
+
+    <section class="planet-content chrome" aria-live="polite">
+      <div class="planet-hero">
+        <h1 id="planet-title">MARS</h1>
+        <div class="planet-actions">
+          <button class="btn-dossier" id="open-dossier-btn" type="button">
+            <span>✦ Scientific Dossier</span>
+          </button>
+          <button class="btn-compare" id="open-compare-btn" type="button">
+            <span>⚖ Compare vs Earth</span>
+          </button>
+        </div>
+      </div>
+      <dl id="facts"></dl>
+    </section>
+
+    <div class="transition-layer" aria-hidden="true"><video id="transition-video" muted playsinline preload="none" crossorigin="anonymous"></video></div>
+    <div class="loading" aria-hidden="true">Calculating Orbital Vector…</div>
+    <div class="custom-cursor" aria-hidden="true">
+      <span class="cursor-orbit"></span><span class="cursor-dot"></span><span class="cursor-label">Warp</span>
+    </div>
+
+    <!-- MODAL: PLANETARY DOSSIER -->
+    <div class="app-overlay" id="dossier-overlay" role="dialog" aria-modal="true" aria-labelledby="dossier-title">
+      <div class="overlay-card">
+        <button class="overlay-close" id="close-dossier" aria-label="Close dossier">✕</button>
+        <span class="planet-card-number" id="dossier-num">[04]</span>
+        <h2 class="overlay-title" id="dossier-title">Mars — Comprehensive Astrophysics Dossier</h2>
+        <p class="overlay-subtitle" id="dossier-summary">Astrophysical overview and key observations.</p>
+
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 24px;">
+          <div class="compare-card">
+            <div style="font-size:12px; color:rgba(255,255,255,0.6);">DIAMETER</div>
+            <div style="font-size:18px; font-weight:700;" id="dossier-diameter">—</div>
+          </div>
+          <div class="compare-card">
+            <div style="font-size:12px; color:rgba(255,255,255,0.6);">GRAVITY</div>
+            <div style="font-size:18px; font-weight:700;" id="dossier-gravity">—</div>
+          </div>
+          <div class="compare-card">
+            <div style="font-size:12px; color:rgba(255,255,255,0.6);">DAY ROTATION</div>
+            <div style="font-size:18px; font-weight:700;" id="dossier-day">—</div>
+          </div>
+          <div class="compare-card">
+            <div style="font-size:12px; color:rgba(255,255,255,0.6);">NATURAL SATELLITES</div>
+            <div style="font-size:18px; font-weight:700;" id="dossier-moons">—</div>
+          </div>
+          <div class="compare-card">
+            <div style="font-size:12px; color:rgba(255,255,255,0.6);">ORBITAL VELOCITY</div>
+            <div style="font-size:18px; font-weight:700;" id="dossier-speed">—</div>
+          </div>
+          <div class="compare-card">
+            <div style="font-size:12px; color:rgba(255,255,255,0.6);">PLANETARY MASS</div>
+            <div style="font-size:18px; font-weight:700;" id="dossier-mass">—</div>
+          </div>
+        </div>
+
+        <div class="compare-card" style="margin-bottom: 20px;">
+          <h4 style="margin:0 0 8px; font-size:15px;">Interior & Atmospheric Composition</h4>
+          <p style="margin:0; font-size:14px; color:rgba(255,255,255,0.8); line-height:1.5;" id="dossier-composition">—</p>
+        </div>
+
+        <div class="compare-card">
+          <h4 style="margin:0 0 8px; font-size:15px;">Milestone Exploration Missions</h4>
+          <div id="dossier-missions" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+        </div>
+
+        <div class="sources-box">
+          <strong>Scientific Verification Sources:</strong> NASA Solar System Exploration Data, Goddard Space Flight Center (Planetary Fact Sheets), ESA Science & Exploration Division, JPL Horizons Ephemeris System.
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: PLANET COMPARATOR -->
+    <div class="app-overlay" id="compare-overlay" role="dialog" aria-modal="true" aria-labelledby="compare-title">
+      <div class="overlay-card">
+        <button class="overlay-close" id="close-compare" aria-label="Close comparison">✕</button>
+        <h2 class="overlay-title" id="compare-title">Planetary Comparison Analysis</h2>
+        <p class="overlay-subtitle">Benchmark astrophysical parameters side-by-side with terrestrial and Jovian standards.</p>
+
+        <div class="compare-container">
+          <!-- Planet A -->
+          <div class="compare-card">
+            <div class="compare-header">
+              <strong style="font-size: 18px;" id="compare-p1-title">Planet A</strong>
+              <select class="compare-selector" id="select-p1" aria-label="Select first planet"></select>
+            </div>
+            <div id="compare-p1-metrics"></div>
+          </div>
+
+          <!-- Planet B -->
+          <div class="compare-card">
+            <div class="compare-header">
+              <strong style="font-size: 18px;" id="compare-p2-title">Earth</strong>
+              <select class="compare-selector" id="select-p2" aria-label="Select comparison planet"></select>
+            </div>
+            <div id="compare-p2-metrics"></div>
+          </div>
+        </div>
+
+        <div class="sources-box">
+          <strong>Comparative Standard:</strong> Dimensions calibrated to WGS 84 (Earth equatorial radius 6,378.1 km, standard gravity 1 g = 9.80665 m/s²). Data courtesy of NASA Astrometric Archive.
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: PLANETS DIRECTORY -->
+    <div class="app-overlay" id="planets-overlay" role="dialog" aria-modal="true" aria-labelledby="planets-title">
+      <div class="overlay-card">
+        <button class="overlay-close" id="close-planets" aria-label="Close planet directory">✕</button>
+        <h2 class="overlay-title" id="planets-title">Solar System Transit Directory</h2>
+        <p class="overlay-subtitle">Direct warp teleportation to any orbital body in the system.</p>
+
+        <div class="planet-grid" id="planet-directory-grid"></div>
+      </div>
+    </div>
+
+    <!-- MODAL: ABOUT & SCIENTIFIC SOURCES -->
+    <div class="app-overlay" id="about-overlay" role="dialog" aria-modal="true" aria-labelledby="about-title">
+      <div class="overlay-card">
+        <button class="overlay-close" id="close-about" aria-label="Close about">✕</button>
+        <h2 class="overlay-title" id="about-title">About Planet Jumping</h2>
+        <p class="overlay-subtitle">A high-fidelity cinematic simulation combining Canvas 3D projective geometry and orbital astrophysics.</p>
+
+        <div style="font-size:15px; line-height:1.7; color:rgba(255,255,255,0.85); display:flex; flex-direction:column; gap:16px;">
+          <p>
+            <strong>Planet Jumping</strong> was conceived as a visceral, borderless space exploration portal. It decouples the viewing aperture from the cosmic scene through a screen-locked clipping projection, transforming a simple web surface into a floating celestial viewport.
+          </p>
+          <div class="compare-card">
+            <h4 style="margin:0 0 8px; color:#fff;">Technical Architecture</h4>
+            <ul style="margin:0; padding-left:20px; font-size:14px; color:rgba(255,255,255,0.75);">
+              <li><strong>Zero Dependencies:</strong> Self-contained vanilla TypeScript/JavaScript with custom 2D Canvas matrix perspective math.</li>
+              <li><strong>Fake 3D Focal Model:</strong> 850px focal perspective projection interpolating 44 rounded-corner vertices per frame.</li>
+              <li><strong>Spatial Web Audio Engine:</strong> Procedural synthesis of cosmic sub-bass drones and frequency sweep warp effects without external media assets.</li>
+              <li><strong>Progressive Web App:</strong> Service Worker precaching with offline resilience.</li>
+            </ul>
+          </div>
+          <div class="compare-card">
+            <h4 style="margin:0 0 8px; color:#fff;">Scientific Citations & Archival Sources</h4>
+            <p style="margin:0; font-size:13px; color:rgba(255,255,255,0.7);">
+              All planetary metrics (masses, atmospheric compositions, orbital velocities, surface temperatures) are curated from:
+            </p>
+            <ul style="margin:8px 0 0; padding-left:20px; font-size:13px; color:rgba(255,255,255,0.75);">
+              <li>NASA Planetary Fact Sheet — Goddard Space Flight Center</li>
+              <li>ESA Planetary Science Archive (PSA)</li>
+              <li>NASA Jet Propulsion Laboratory (JPL) Horizons System</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: SETTINGS & MENU -->
+    <div class="app-overlay" id="menu-overlay" role="dialog" aria-modal="true" aria-labelledby="menu-title">
+      <div class="overlay-card" style="max-width: 600px;">
+        <button class="overlay-close" id="close-menu" aria-label="Close menu">✕</button>
+        <h2 class="overlay-title" id="menu-title">Flight Deck Configuration</h2>
+        <p class="overlay-subtitle">Telemetry options, audio synthesis, and accessibility preferences.</p>
+
+        <div class="settings-row">
+          <div class="settings-info">
+            <h4>Spatial Web Audio</h4>
+            <p>Generative cosmic resonance and warp sound effects (Shortcut: M)</p>
+          </div>
+          <button class="btn-dossier" id="menu-audio-toggle" type="button">Toggle</button>
+        </div>
+
+        <div class="settings-row">
+          <div class="settings-info">
+            <h4>Eco / Low-Power Mode</h4>
+            <p>Caps DPR at 1.0 and suspends heavy CSS blur filters (Shortcut: P)</p>
+          </div>
+          <button class="btn-dossier" id="menu-eco-toggle" type="button">Toggle</button>
+        </div>
+
+        <div class="settings-row">
+          <div class="settings-info">
+            <h4>Reset Journey Origin</h4>
+            <p>Return orbit trajectory to Mercury [01]</p>
+          </div>
+          <button class="btn-dossier" id="menu-reset-btn" type="button">Restart</button>
+        </div>
+
+        <div style="margin-top:24px; padding-top:16px; border-top:1px solid rgba(255,255,255,0.12);">
+          <h4 style="margin:0 0 10px; font-size:14px; text-transform:uppercase; letter-spacing:0.08em; color:rgba(255,255,255,0.6);">Keyboard Navigation Shortcuts</h4>
+          <div style="display:grid; grid-template-columns: auto 1fr; gap: 8px 16px; font-size:13px;">
+            <code style="background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px;">Space / Enter</code> <span>Warp to next planetary destination</span>
+            <code style="background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px;">→ / ↓</code> <span>Advance to next planet in system</span>
+            <code style="background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px;">← / ↑</code> <span>Return to previous planet in system</span>
+            <code style="background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px;">Esc</code> <span>Dismiss any open flight deck overlay</span>
+            <code style="background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px;">M</code> <span>Mute / Unmute cosmic audio synthesis</span>
+            <code style="background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px;">P</code> <span>Toggle Eco / Performance mode</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    (function() {
+      // 1. ASSET DEFINITIONS
+      const MARS_BG = '/assets/mars-background.mp4';
+      const TO_EARTH = '/assets/to-earth.mp4';
+      const TO_VENUS = '/assets/to-venus.mp4';
+      const TO_MARS = '/assets/to-mars.mp4';
+      const TO_MERCURY = '/assets/to-Mercury.mp4';
+      const TO_JUPITER = '/assets/to-Jupiter.mp4';
+      const TO_SATURN = '/assets/to-Saturn.mp4';
+      const TO_URANUS = '/assets/to-Uranus.mp4';
+      const TO_NEPTUNE = '/assets/to-Neptune.mp4';
+      const LOGO = '/assets/logo.svg';
+
+      // 2. COMPLETE SOLAR SYSTEM DATA MODEL (8 PLANETS)
+      const planets = ['Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune'];
+      const planetVideos = {
+        mercury: TO_MERCURY,
+        venus: TO_VENUS,
+        earth: TO_EARTH,
+        mars: TO_MARS,
+        jupiter: TO_JUPITER,
+        saturn: TO_SATURN,
+        uranus: TO_URANUS,
+        neptune: TO_NEPTUNE
+      };
+
+      const states = {
+        mercury: {
+          id: 'mercury',
+          name: 'Mercury',
+          next: 'Venus',
+          prev: 'Neptune',
+          number: '[01]',
+          portal: TO_VENUS,
+          background: 'mercury-background',
+          facts: [
+            ['Distance:', '57.9 million km (0.39 AU) from the Sun.'],
+            ['Year:', '88 Earth days per orbital revolution.'],
+            ['Temperature:', '-180 °C night to 430 °C in solar illumination.'],
+            ['Atmosphere:', 'Thin exosphere composed of oxygen, sodium, and helium.']
+          ],
+          dossier: {
+            diameterKm: 4879,
+            diameterStr: '4,879 km (0.38 Earths)',
+            gravityVal: 3.70,
+            gravityStr: '3.70 m/s² (0.38 g)',
+            dayLength: '58.6 Earth days',
+            moons: 0,
+            orbitalSpeedVal: 47.4,
+            orbitalSpeedStr: '47.4 km/s',
+            mass: '3.30 × 10²³ kg (0.055 Earths)',
+            tempRange: '-180 °C to 430 °C',
+            distAu: 0.39,
+            composition: 'Enormous metallic iron-nickel core (75% of radius) surrounded by a thin silicate mantle.',
+            missions: ['Mariner 10 (1974–1975)', 'MESSENGER (2011–2015)', 'BepiColombo (en route, 2026)'],
+            summary: 'The smallest planet in the Solar System, dense and cratered, enduring the most extreme thermal swings.'
+          }
+        },
+        venus: {
+          id: 'venus',
+          name: 'Venus',
+          next: 'Earth',
+          prev: 'Mercury',
+          number: '[02]',
+          portal: TO_EARTH,
+          background: 'venus-background',
+          facts: [
+            ['Distance:', '108.2 million km (0.72 AU) from the Sun.'],
+            ['Year:', '225 Earth days per orbit.'],
+            ['Temperature:', 'Around 465 °C — the hottest planet in the Solar System.'],
+            ['Atmosphere:', 'Extremely dense, mostly carbon dioxide, with clouds of sulfuric acid.']
+          ],
+          dossier: {
+            diameterKm: 12104,
+            diameterStr: '12,104 km (0.95 Earths)',
+            gravityVal: 8.87,
+            gravityStr: '8.87 m/s² (0.90 g)',
+            dayLength: '243 Earth days (Retrograde)',
+            moons: 0,
+            orbitalSpeedVal: 35.0,
+            orbitalSpeedStr: '35.0 km/s',
+            mass: '4.87 × 10²⁴ kg (0.815 Earths)',
+            tempRange: '465 °C constant',
+            distAu: 0.72,
+            composition: 'Iron core, rocky convective silicate mantle, volcanic basalt plains.',
+            missions: ['Venera 7 (First landing, 1970)', 'Magellan (Radar mapping, 1990)', 'Akatsuki (2015–)', 'DAVINCI / VERITAS (Planned)'],
+            summary: 'Earth’s runaway greenhouse twin, covered by an impenetrable veil of reflective sulfuric acid clouds.'
+          }
+        },
+        earth: {
+          id: 'earth',
+          name: 'Earth',
+          next: 'Mars',
+          prev: 'Venus',
+          number: '[03]',
+          portal: TO_MARS,
+          background: 'earth-background',
+          facts: [
+            ['Distance:', '149.6 million km (1.00 AU) from the Sun.'],
+            ['Year:', '365.25 Earth days.'],
+            ['Temperature:', 'Average surface temperature around 15 °C.'],
+            ['Atmosphere:', 'Mostly nitrogen and oxygen, supporting life and liquid water.']
+          ],
+          dossier: {
+            diameterKm: 12742,
+            diameterStr: '12,742 km (1.00 Earths)',
+            gravityVal: 9.81,
+            gravityStr: '9.81 m/s² (1.00 g)',
+            dayLength: '23h 56m 04s',
+            moons: 1,
+            orbitalSpeedVal: 29.8,
+            orbitalSpeedStr: '29.8 km/s',
+            mass: '5.97 × 10²⁴ kg',
+            tempRange: '-89 °C to 58 °C (Mean 15 °C)',
+            distAu: 1.00,
+            composition: 'Solid inner iron core, liquid outer dynamo core, viscous silicate mantle, dynamic plate tectonics.',
+            missions: ['Apollo Lunar Expeditions', 'Hubble / James Webb Observatories', 'International Space Station', 'Copernicus Sentinel constellation'],
+            summary: 'The celestial sanctuary harboring liquid oceans, an oxygenated biosphere, and a protective magnetic shield.'
+          }
+        },
+        mars: {
+          id: 'mars',
+          name: 'Mars',
+          next: 'Jupiter',
+          prev: 'Earth',
+          number: '[04]',
+          portal: TO_JUPITER,
+          background: 'mars-background',
+          facts: [
+            ['Distance:', 'About 228 million km (1.52 AU).'],
+            ['Year:', 'One Martian year is equal to 687 Earth days.'],
+            ['Temperature:', 'Around -60 °C, dropping to -125 °C at the poles in winter.'],
+            ['Atmosphere:', 'Very thin, consisting of 95% carbon dioxide, with frequent dust storms.']
+          ],
+          dossier: {
+            diameterKm: 6779,
+            diameterStr: '6,779 km (0.53 Earths)',
+            gravityVal: 3.71,
+            gravityStr: '3.71 m/s² (0.38 g)',
+            dayLength: '24h 37m 22s',
+            moons: 2,
+            orbitalSpeedVal: 24.1,
+            orbitalSpeedStr: '24.1 km/s',
+            mass: '6.42 × 10²³ kg (0.107 Earths)',
+            tempRange: '-125 °C to 20 °C (Mean -60 °C)',
+            distAu: 1.52,
+            composition: 'Sulfur-rich iron core, silicate mantle, iron-oxide-rich crust conferring its red coloration.',
+            missions: ['Viking 1 & 2 (1976)', 'Pathfinder / Sojourner (1997)', 'Curiosity Rover (2012–)', 'Perseverance & Ingenuity (2021–)'],
+            summary: 'The Red Planet, sculpted by ancient river channels, mega-canyons (Valles Marineris), and colossal volcanoes.'
+          }
+        },
+        jupiter: {
+          id: 'jupiter',
+          name: 'Jupiter',
+          next: 'Saturn',
+          prev: 'Mars',
+          number: '[05]',
+          portal: TO_SATURN,
+          background: 'jupiter-background',
+          facts: [
+            ['Distance:', '778.5 million km (5.20 AU) from the Sun.'],
+            ['Year:', '11.86 Earth years per orbit.'],
+            ['Temperature:', '-110 °C at cloud deck; tens of thousands of degrees at core.'],
+            ['Atmosphere:', 'Immense hydrogen & helium envelope with the Great Red Spot storm.']
+          ],
+          dossier: {
+            diameterKm: 139820,
+            diameterStr: '139,820 km (11.0 Earths)',
+            gravityVal: 24.79,
+            gravityStr: '24.79 m/s² (2.53 g)',
+            dayLength: '9h 55m 30s',
+            moons: 95,
+            orbitalSpeedVal: 13.1,
+            orbitalSpeedStr: '13.1 km/s',
+            mass: '1.898 × 10²⁷ kg (317.8 Earths)',
+            tempRange: '-110 °C cloud top',
+            distAu: 5.20,
+            composition: 'Molecular hydrogen atmosphere transitioning into liquid metallic hydrogen surrounding a dense heavy-element core.',
+            missions: ['Pioneer 10 & 11', 'Voyager 1 & 2', 'Galileo Orbiter (1995–2003)', 'Juno (2016–)', 'JUICE / Europa Clipper (Upcoming)'],
+            summary: 'The reigning gas giant of our system, possessing more mass than all other planets combined.'
+          }
+        },
+        saturn: {
+          id: 'saturn',
+          name: 'Saturn',
+          next: 'Uranus',
+          prev: 'Jupiter',
+          number: '[06]',
+          portal: TO_URANUS,
+          background: 'saturn-background',
+          facts: [
+            ['Distance:', '1.43 billion km (9.58 AU) from the Sun.'],
+            ['Year:', '29.45 Earth years per orbit.'],
+            ['Temperature:', '-140 °C cloud layer average.'],
+            ['Atmosphere:', 'Hydrogen & helium with 1,800 km/h equatorial jet streams.']
+          ],
+          dossier: {
+            diameterKm: 116460,
+            diameterStr: '116,460 km (9.1 Earths)',
+            gravityVal: 10.44,
+            gravityStr: '10.44 m/s² (1.06 g)',
+            dayLength: '10h 33m 38s',
+            moons: 146,
+            orbitalSpeedVal: 9.7,
+            orbitalSpeedStr: '9.7 km/s',
+            mass: '5.68 × 10²⁶ kg (95.2 Earths)',
+            tempRange: '-140 °C cloud top',
+            distAu: 9.58,
+            composition: 'Lower average density than liquid water (0.687 g/cm³); metallic hydrogen core mantle and brilliant water-ice rings.',
+            missions: ['Pioneer 11', 'Voyager 1 & 2', 'Cassini-Huygens Grand Finale (2004–2017)', 'Dragonfly mission (Titan en route)'],
+            summary: 'Renowned for its breathtaking ring system spanning 282,000 km yet averaging only 10 meters in thickness.'
+          }
+        },
+        uranus: {
+          id: 'uranus',
+          name: 'Uranus',
+          next: 'Neptune',
+          prev: 'Saturn',
+          number: '[07]',
+          portal: TO_NEPTUNE,
+          background: 'uranus-background',
+          facts: [
+            ['Distance:', '2.87 billion km (19.2 AU) from the Sun.'],
+            ['Year:', '84.0 Earth years per orbit.'],
+            ['Temperature:', '-195 °C down to -224 °C (coldest atmosphere in Solar System).'],
+            ['Atmosphere:', 'Hydrogen, helium, and methane clouds imparting an azure tint.']
+          ],
+          dossier: {
+            diameterKm: 50724,
+            diameterStr: '50,724 km (4.0 Earths)',
+            gravityVal: 8.69,
+            gravityStr: '8.69 m/s² (0.89 g)',
+            dayLength: '17h 14m (Retrograde)',
+            moons: 28,
+            orbitalSpeedVal: 6.8,
+            orbitalSpeedStr: '6.8 km/s',
+            mass: '8.68 × 10²⁵ kg (14.5 Earths)',
+            tempRange: '-224 °C minimum',
+            distAu: 19.2,
+            composition: 'Supercritical slush of water, ammonia, and methane ices over a small silicate-iron core with a 97.8° axial tilt.',
+            missions: ['Voyager 2 historic close flyby (January 1986)'],
+            summary: 'An ice giant rolling sideways on its orbital plane, bathed in eerie pale cyan tranquility.'
+          }
+        },
+        neptune: {
+          id: 'neptune',
+          name: 'Neptune',
+          next: 'Mercury',
+          prev: 'Uranus',
+          number: '[08]',
+          portal: TO_MERCURY,
+          background: 'neptune-background',
+          facts: [
+            ['Distance:', '4.50 billion km (30.1 AU) from the Sun.'],
+            ['Year:', '164.8 Earth years per orbit.'],
+            ['Temperature:', '-200 °C cloud top temperature.'],
+            ['Atmosphere:', 'Dynamic hydrogen-helium-methane with supersonic winds up to 2,100 km/h.']
+          ],
+          dossier: {
+            diameterKm: 49244,
+            diameterStr: '49,244 km (3.9 Earths)',
+            gravityVal: 11.15,
+            gravityStr: '11.15 m/s² (1.14 g)',
+            dayLength: '16h 06m',
+            moons: 16,
+            orbitalSpeedVal: 5.4,
+            orbitalSpeedStr: '5.4 km/s',
+            mass: '1.02 × 10²⁶ kg (17.1 Earths)',
+            tempRange: '-218 °C to -200 °C',
+            distAu: 30.1,
+            composition: 'High-pressure mantle of water, methane, and ammonia ices surrounding a rocky core.',
+            missions: ['Voyager 2 close encounter (August 1989)'],
+            summary: 'The outermost major planet, an intense blue realm whipped by the fastest planetary winds in the Solar System.'
+          }
+        }
+      };
+
+      // State and Preferences (Persisted in localStorage)
+      const savedPlanet = localStorage.getItem('planet_jumping_last');
+      let current = (savedPlanet && states[savedPlanet]) ? savedPlanet : 'mars';
+      let audioEnabled = localStorage.getItem('planet_jumping_audio') === 'true';
+      let ecoMode = localStorage.getItem('planet_jumping_eco') === 'true';
+
+      let busy = false;
+      let transitionActive = false;
+      let proceduralTransition = false;
+      let expansion = 0;
+      let maskScale = 1;
+      let canvasOpacity = 1;
+      let hasFrozenScene = false;
+      let hasRenderedOnce = false;
+
+      // Pointer tilt
+      let rotX = 0, rotY = 0;
+      let targetX = 0, targetY = 0;
+      let lastTime = performance.now();
+
+      // DOM Elements
+      const expEl = document.querySelector('.experience');
+      const planetTitle = document.getElementById('planet-title');
+      const nextNumber = document.getElementById('next-number');
+      const nextName = document.getElementById('next-name');
+      const portalBtn = document.getElementById('portal');
+      const portalVideo = document.getElementById('portal-video');
+      const portalImage = document.getElementById('portal-image');
+      const factsDl = document.getElementById('facts');
+      const planetListAside = document.querySelector('.planet-list');
+      const transitionVideo = document.getElementById('transition-video');
+      const preloader = document.getElementById('preloader');
+      const preloaderCount = document.getElementById('preloader-count');
+      const preloaderVal = document.getElementById('preloader-value');
+      const floatingLogo = document.getElementById('floating-logo');
+      const portalCanvas = document.getElementById('portal-canvas');
+      const sceneCanvas = document.getElementById('scene-canvas');
+      const pCtx = portalCanvas.getContext('2d');
+      const sCtx = sceneCanvas.getContext('2d');
+
+      // Audio Elements
+      const audioToggle = document.getElementById('audio-toggle');
+      const audioIcon = document.getElementById('audio-icon');
+      const audioLabel = document.getElementById('audio-label');
+      let audioCtx = null;
+      let ambientOsc = null;
+      let ambientGain = null;
+      let noiseNode = null;
+
+      // Overlays
+      const dossierOverlay = document.getElementById('dossier-overlay');
+      const compareOverlay = document.getElementById('compare-overlay');
+      const planetsOverlay = document.getElementById('planets-overlay');
+      const aboutOverlay = document.getElementById('about-overlay');
+      const menuOverlay = document.getElementById('menu-overlay');
+
+      // Cursor
+      const cursorEl = document.querySelector('.custom-cursor');
+      let cursorX = window.innerWidth / 2, cursorY = window.innerHeight / 2;
+      let orbitX = cursorX, orbitY = cursorY;
+
+      // 3. GENERATIVE PROCEDURAL CELESTIAL CANVAS
+      // Ensures that even if external videos/images fail or for newly explored outer planets,
+      // a stunning visual celestial canvas is always ready.
+      const proceduralCanvas = document.createElement('canvas');
+      proceduralCanvas.width = 1280;
+      proceduralCanvas.height = 720;
+      const procCtx = proceduralCanvas.getContext('2d');
+
+      function renderProceduralPlanet(planetKey) {
+        const p = states[planetKey];
+        const w = proceduralCanvas.width, h = proceduralCanvas.height;
+        procCtx.fillStyle = '#060505';
+        procCtx.fillRect(0, 0, w, h);
+
+        // Starfield
+        procCtx.fillStyle = '#ffffff';
+        for (let i = 0; i < 90; i++) {
+          const sx = (Math.sin(i * 99 + 1) * 0.5 + 0.5) * w;
+          const sy = (Math.cos(i * 33 + 2) * 0.5 + 0.5) * h;
+          const sr = (i % 3 === 0) ? 1.5 : 0.8;
+          procCtx.globalAlpha = 0.3 + (i % 5) * 0.12;
+          procCtx.beginPath();
+          procCtx.arc(sx, sy, sr, 0, Math.PI * 2);
+          procCtx.fill();
+        }
+        procCtx.globalAlpha = 1;
+
+        // Planet sphere
+        const cx = w * 0.5, cy = h * 0.5;
+        const rad = 240;
+        const grad = procCtx.createRadialGradient(cx - rad * 0.35, cy - rad * 0.35, rad * 0.1, cx, cy, rad);
+
+        if (planetKey === 'jupiter') {
+          grad.addColorStop(0, '#ecd7b6');
+          grad.addColorStop(0.4, '#c9996d');
+          grad.addColorStop(0.8, '#825838');
+          grad.addColorStop(1, '#2c1910');
+        } else if (planetKey === 'saturn') {
+          grad.addColorStop(0, '#f9e8be');
+          grad.addColorStop(0.5, '#ceaf7b');
+          grad.addColorStop(0.85, '#997c4e');
+          grad.addColorStop(1, '#332714');
+        } else if (planetKey === 'uranus') {
+          grad.addColorStop(0, '#d1fbf7');
+          grad.addColorStop(0.6, '#64cdd8');
+          grad.addColorStop(0.9, '#2f748a');
+          grad.addColorStop(1, '#0e2b38');
+        } else if (planetKey === 'neptune') {
+          grad.addColorStop(0, '#759dff');
+          grad.addColorStop(0.5, '#3b61dd');
+          grad.addColorStop(0.85, '#1e3090');
+          grad.addColorStop(1, '#091038');
+        } else {
+          grad.addColorStop(0, '#d59b73');
+          grad.addColorStop(0.5, '#935835');
+          grad.addColorStop(1, '#2a1409');
+        }
+
+        procCtx.fillStyle = grad;
+        procCtx.beginPath();
+        procCtx.arc(cx, cy, rad, 0, Math.PI * 2);
+        procCtx.fill();
+
+        // Saturn Rings
+        if (planetKey === 'saturn') {
+          procCtx.save();
+          procCtx.translate(cx, cy);
+          procCtx.rotate(-0.35);
+          procCtx.scale(1, 0.28);
+          procCtx.strokeStyle = 'rgba(235, 215, 175, 0.55)';
+          procCtx.lineWidth = 42;
+          procCtx.beginPath();
+          procCtx.arc(0, 0, rad * 1.6, 0, Math.PI * 2);
+          procCtx.stroke();
+          procCtx.restore();
+        }
+
+        // Atmospheric halo
+        const halo = procCtx.createRadialGradient(cx, cy, rad * 0.95, cx, cy, rad * 1.15);
+        halo.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
+        halo.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        procCtx.fillStyle = halo;
+        procCtx.beginPath();
+        procCtx.arc(cx, cy, rad * 1.15, 0, Math.PI * 2);
+        procCtx.fill();
+      }
+
+      // 4. SPATIAL AUDIO SYSTEM (Zero external dependency, Web Audio API)
+      function initAudio() {
+        if (audioCtx) return;
+        try {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          audioCtx = new AudioContext();
+
+          // Low-frequency spatial drone
+          ambientOsc = audioCtx.createOscillator();
+          ambientOsc.type = 'sine';
+          ambientOsc.frequency.setValueAtTime(55, audioCtx.currentTime); // 55Hz deep space fundamental
+
+          const filter = audioCtx.createBiquadFilter();
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(110, audioCtx.currentTime);
+
+          ambientGain = audioCtx.createGain();
+          ambientGain.gain.setValueAtTime(audioEnabled ? 0.08 : 0, audioCtx.currentTime);
+
+          ambientOsc.connect(filter);
+          filter.connect(ambientGain);
+          ambientGain.connect(audioCtx.destination);
+          ambientOsc.start();
+        } catch (e) {
+          console.warn('AudioContext initialization deferred');
+        }
+      }
+
+      function setAudioState(enabled) {
+        audioEnabled = enabled;
+        localStorage.setItem('planet_jumping_audio', enabled);
+        if (audioEnabled) {
+          initAudio();
+          if (audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume();
+          }
+          if (ambientGain) {
+            ambientGain.gain.setTargetAtTime(0.08, audioCtx.currentTime, 0.5);
+          }
+          audioIcon.textContent = '🔊';
+          audioLabel.textContent = 'Sound ON';
+          audioToggle.classList.add('is-active');
+        } else {
+          if (ambientGain && audioCtx) {
+            ambientGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.3);
+          }
+          audioIcon.textContent = '🔇';
+          audioLabel.textContent = 'Sound OFF';
+          audioToggle.classList.remove('is-active');
+        }
+      }
+
+      function playWarpSound() {
+        if (!audioEnabled || !audioCtx) return;
+        try {
+          const now = audioCtx.currentTime;
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          const filter = audioCtx.createBiquadFilter();
+
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(60, now);
+          osc.frequency.exponentialRampToValueAtTime(520, now + 1.2);
+
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(120, now);
+          filter.frequency.exponentialRampToValueAtTime(1800, now + 0.9);
+          filter.frequency.exponentialRampToValueAtTime(80, now + 1.6);
+
+          gain.gain.setValueAtTime(0.001, now);
+          gain.gain.linearRampToValueAtTime(0.12, now + 0.3);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.7);
+
+          osc.connect(filter);
+          filter.connect(gain);
+          gain.connect(audioCtx.destination);
+
+          osc.start(now);
+          osc.stop(now + 1.8);
+        } catch (e) {}
+      }
+
+      audioToggle.addEventListener('click', () => {
+        setAudioState(!audioEnabled);
+      });
+
+      // Eco / Low Power Mode
+      function setEcoMode(enabled) {
+        ecoMode = enabled;
+        localStorage.setItem('planet_jumping_eco', enabled);
+        if (ecoMode) {
+          document.body.classList.add('is-eco-mode');
+        } else {
+          document.body.classList.remove('is-eco-mode');
+        }
+        resizeCanvas();
+      }
+      setEcoMode(ecoMode);
+
+      // 5. CANVAS & 3D PROJECTION ENGINE
+      function easeInOutCubic(t) {
+        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      }
+
+      function animateValue(setter, duration) {
+        return new Promise(resolve => {
+          const start = performance.now();
+          function tick(now) {
+            const elapsed = now - start;
+            const progress = Math.min(1, elapsed / duration);
+            setter(easeInOutCubic(progress));
+            if (progress < 1) {
+              requestAnimationFrame(tick);
+            } else {
+              resolve();
+            }
+          }
+          requestAnimationFrame(tick);
+        });
+      }
+
+      function resizeCanvas() {
+        const d = ecoMode ? 1 : Math.min(window.devicePixelRatio || 1, 2);
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+
+        portalCanvas.width = w * d;
+        portalCanvas.height = h * d;
+        portalCanvas.style.width = w + 'px';
+        portalCanvas.style.height = h + 'px';
+        pCtx.setTransform(d, 0, 0, d, 0, 0);
+
+        if (!hasFrozenScene) {
+          sceneCanvas.width = w * d;
+          sceneCanvas.height = h * d;
+          sceneCanvas.style.width = w + 'px';
+          sceneCanvas.style.height = h + 'px';
+          sCtx.setTransform(d, 0, 0, d, 0, 0);
+        }
+      }
+
+      window.addEventListener('resize', resizeCanvas);
+
+      function drawCover(ctx, media) {
+        if (!media) return;
+        const mw = media.videoWidth || media.naturalWidth || media.width || 1280;
+        const mh = media.videoHeight || media.naturalHeight || media.height || 720;
+        const scale = Math.max(window.innerWidth / mw, window.innerHeight / mh);
+        const dw = mw * scale;
+        const dh = mh * scale;
+        const dx = (window.innerWidth - dw) / 2;
+        const dy = (window.innerHeight - dh) / 2;
+        try {
+          ctx.drawImage(media, dx, dy, dw, dh);
+        } catch (e) {
+          // If video throws or cross-origin taint occurs, draw procedural fallback
+          renderProceduralPlanet(current);
+          ctx.drawImage(proceduralCanvas, dx, dy, dw, dh);
+        }
+      }
+
+      function drawShade(ctx) {
+        const h = window.innerHeight;
+        const w = window.innerWidth;
+        const grad = ctx.createLinearGradient(0, h * 0.52, 0, h);
+        grad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+        grad.addColorStop(1, 'rgba(0, 0, 0, 0.88)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, h * 0.52, w, h * 0.48);
+      }
+
+      // 6. RENDER LOGIC
+      function render() {
+        const state = states[current];
+        expEl.setAttribute('data-planet', current);
+        planetTitle.textContent = state.name.toUpperCase();
+        nextName.textContent = state.next;
+        nextNumber.textContent = state.number;
+        portalBtn.setAttribute('aria-label', 'Travel to ' + state.next);
+        localStorage.setItem('planet_jumping_last', current);
+
+        // Facts
+        factsDl.innerHTML = '';
+        state.facts.forEach(([key, val]) => {
+          const div = document.createElement('div');
+          div.className = 'fact';
+          const dt = document.createElement('dt');
+          dt.textContent = key;
+          const dd = document.createElement('dd');
+          dd.textContent = val;
+          div.appendChild(dt);
+          div.appendChild(dd);
+          factsDl.appendChild(div);
+        });
+
+        // Planet sidebar list (all 8 clickable)
+        planetListAside.innerHTML = '';
+        planets.forEach(p => {
+          const pKey = p.toLowerCase();
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'planet-item' + (pKey === current ? ' active' : '');
+          btn.textContent = p;
+          btn.setAttribute('aria-label', 'Jump to ' + p);
+          btn.addEventListener('click', () => {
+            if (pKey !== current && !busy) {
+              warpToPlanet(pKey);
+            }
+          });
+          planetListAside.appendChild(btn);
+        });
+
+        if (hasRenderedOnce) {
+          planetListAside.classList.remove('is-switching');
+          void planetListAside.offsetWidth; // force reflow
+          planetListAside.classList.add('is-switching');
+        }
+
+        // Background video matching
+        document.querySelectorAll('.background').forEach(bg => {
+          if (bg.id === state.background) {
+            bg.classList.add('is-visible');
+            bg.currentTime = 0;
+            bg.play().catch(() => {});
+          } else {
+            bg.classList.remove('is-visible');
+            bg.pause();
+          }
+        });
+
+        // Portal media switch
+        if (state.image) {
+          portalImage.style.display = 'block';
+          portalVideo.style.display = 'none';
+          portalVideo.pause();
+          portalImage.src = state.image;
+        } else if (state.portal) {
+          portalImage.style.display = 'none';
+          portalVideo.style.display = 'block';
+          if (portalVideo.src !== state.portal) {
+            portalVideo.src = state.portal;
+            portalVideo.load();
+          }
+          portalVideo.play().catch(() => {});
+        } else {
+          // Celestial procedural generator
+          renderProceduralPlanet(state.next.toLowerCase());
+          portalImage.style.display = 'block';
+          portalVideo.style.display = 'none';
+          portalVideo.pause();
+          portalImage.src = proceduralCanvas.toDataURL();
+        }
+
+        hasRenderedOnce = true;
+      }
+
+      function revealMask() {
+        expEl.classList.remove('mask-revealing');
+        void expEl.offsetWidth;
+        expEl.classList.add('mask-revealing');
+        maskScale = 0;
+        return animateValue(v => { maskScale = v; }, 1050);
+      }
+
+      function revealPlanetContent() {
+        expEl.classList.remove('content-revealing');
+        void expEl.offsetWidth;
+        expEl.classList.add('content-revealing');
+      }
+
+      // 7. TRAVEL TRANSITION (Interplanetary Warp)
+      async function warpToPlanet(targetPlanetKey) {
+        if (busy || !states[targetPlanetKey]) return;
+        busy = true;
+        targetX = 0;
+        targetY = 0;
+        proceduralTransition = false;
+
+        playWarpSound();
+        const sourceUrl = planetVideos[targetPlanetKey];
+        transitionVideo.src = sourceUrl;
+        transitionVideo.load();
+        expEl.classList.add('is-loading');
+
+        try {
+          await new Promise(resolve => {
+            let settled = false;
+            function done() {
+              if (!settled) {
+                settled = true;
+                resolve();
+              }
+            }
+            transitionVideo.addEventListener('canplaythrough', done, { once: true });
+            transitionVideo.addEventListener('error', done, { once: true });
+            setTimeout(done, 1400); // 1.4s safety network timeout
+          });
+
+          expEl.classList.remove('is-loading', 'content-revealing', 'mask-revealing');
+          expEl.classList.add('is-transitioning');
+          transitionVideo.currentTime = 0;
+          transitionVideo.playbackRate = 1.3;
+          canvasOpacity = 0;               // départ invisible
+          transitionActive = true;
+
+          let transitionPlayed = false;
+          try {
+            await transitionVideo.play();
+            transitionPlayed = true;
+          } catch (err) {
+            proceduralTransition = true;
+            renderProceduralPlanet(targetPlanetKey);
+            console.warn('Transition video unavailable; using procedural fallback:', err);
+          }
+          await Promise.all([
+            animateValue(v => { expansion = v; }, 1100),      // agrandissement
+            animateValue(v => { canvasOpacity = v; }, 600)    // fondu 0 → 1
+]);
+
+          if (transitionPlayed) {
+            await new Promise(resolve => {
+              if (transitionVideo.ended || transitionVideo.error) return resolve();
+              transitionVideo.addEventListener('ended', resolve, { once: true });
+              transitionVideo.addEventListener('error', resolve, { once: true });
+              setTimeout(resolve, 6000);
+            });
+          }
+
+          // Freeze final frame into scene canvas
+        // Freeze final frame into scene canvas
+            const d = ecoMode ? 1 : Math.min(window.devicePixelRatio || 1, 2);
+            sceneCanvas.width = window.innerWidth * d;
+            sceneCanvas.height = window.innerHeight * d;
+            sceneCanvas.style.width = window.innerWidth + 'px';
+            sceneCanvas.style.height = window.innerHeight + 'px';
+            sCtx.setTransform(d, 0, 0, d, 0, 0);
+            sCtx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+            if (transitionPlayed && !transitionVideo.error && transitionVideo.readyState >= 2) {
+              drawCover(sCtx, transitionVideo);
+            } else {
+              renderProceduralPlanet(targetPlanetKey);
+              drawCover(sCtx, proceduralCanvas);
+            }
+            hasFrozenScene = true;
+
+          current = targetPlanetKey;
+          expEl.classList.add('is-committing');
+          render();
+
+          await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+          transitionActive = false;
+          proceduralTransition = false;
+          expansion = 0;
+          maskScale = 0;
+          canvasOpacity = 1;
+          expEl.classList.remove('is-transitioning', 'is-committing');
+
+          const maskRevealPromise = revealMask();
+          setTimeout(revealPlanetContent, 100);
+          await maskRevealPromise;
+
+         setTimeout(() => {
+  transitionVideo.removeAttribute('src');
+  transitionVideo.load();
+  // hasFrozenScene reste true : la dernière image sert de fond
+  busy = false;
+}, 450);
+        } catch (err) {
+          transitionActive = false;
+          proceduralTransition = false;
+          expansion = 0;
+          maskScale = 1;
+          canvasOpacity = 1;
+          expEl.classList.remove('is-loading', 'is-transitioning', 'is-committing');
+          hasFrozenScene = false;
+          busy = false;
+        }
+      }
+
+      function travelNext() {
+        const nextKey = states[current].next.toLowerCase();
+        warpToPlanet(nextKey);
+      }
+
+      function travelPrev() {
+        const prevKey = states[current].prev ? states[current].prev.toLowerCase() : 'mercury';
+        warpToPlanet(prevKey);
+      }
+
+      portalBtn.addEventListener('click', travelNext);
+
+      // 8. POINTER TILT & CUSTOM CURSOR
+      window.addEventListener('pointermove', e => {
+        cursorX = e.clientX;
+        cursorY = e.clientY;
+        cursorEl.classList.add('is-visible');
+
+        if (!busy) {
+          targetY = (e.clientX / window.innerWidth - 0.5) * 37.4;
+          targetX = (e.clientY / window.innerHeight - 0.5) * -33;
+        }
+      });
+
+      document.addEventListener('mouseleave', () => {
+        cursorEl.classList.remove('is-visible');
+        targetX = 0;
+        targetY = 0;
+      });
+
+      portalBtn.addEventListener('pointerenter', () => {
+        cursorEl.classList.add('is-enter');
+      });
+      portalBtn.addEventListener('pointerleave', () => {
+        cursorEl.classList.remove('is-enter');
+        if (!busy) {
+          targetX = 0;
+          targetY = 0;
+        }
+      });
+
+      function cursorLoop() {
+        orbitX += (cursorX - orbitX) * 0.2;
+        orbitY += (cursorY - orbitY) * 0.2;
+        cursorEl.style.transform = 'translate3d(' + orbitX + 'px,' + orbitY + 'px,0)';
+        requestAnimationFrame(cursorLoop);
+      }
+
+      // Rounded-rect point sampling
+      function getRoundedRectPoints(w, h, r) {
+        r = Math.min(r, w / 2, h / 2);
+        const points = [];
+        const arcs = [
+          [ w / 2 - r, -h / 2 + r, -Math.PI / 2, 0 ],
+          [ w / 2 - r,  h / 2 - r, 0, Math.PI / 2 ],
+          [-w / 2 + r,  h / 2 - r, Math.PI / 2, Math.PI ],
+          [-w / 2 + r, -h / 2 + r, Math.PI, Math.PI * 1.5 ]
+        ];
+
+        arcs.forEach(([cx, cy, a1, a2]) => {
+          for (let i = 0; i <= 10; i++) {
+            const angle = a1 + (a2 - a1) * (i / 10);
+            points.push([
+              cx + Math.cos(angle) * r,
+              cy + Math.sin(angle) * r
+            ]);
+          }
+        });
+        return points;
+      }
+
+      // Main Canvas Frame Loop
+      function draw(now) {
+        const dt = Math.min(40, now - lastTime);
+        lastTime = now;
+
+        if (!busy) {
+          rotX += (targetX - rotX) * Math.min(1, dt * 0.009);
+          rotY += (targetY - rotY) * Math.min(1, dt * 0.009);
+        }
+
+        pCtx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+
+        if (hasFrozenScene) {
+          try {
+            pCtx.drawImage(sceneCanvas, 0, 0, window.innerWidth, window.innerHeight);
+            drawShade(pCtx);
+          } catch(e) {}
+        }
+
+        const rect = portalBtn.getBoundingClientRect();
+        const rectCx = rect.left + rect.width / 2;
+        const rectCy = rect.top + rect.height / 2;
+        const e = expansion;
+
+        const cx = rectCx + (window.innerWidth / 2 - rectCx) * e;
+        const cy = rectCy + (window.innerHeight / 2 - rectCy) * e;
+        const baseW = rect.width + (window.innerWidth - rect.width) * e;
+        const baseH = rect.height + (window.innerHeight - rect.height) * e;
+        const scale = e ? 1 : maskScale;
+        const w = baseW * scale;
+        const h = baseH * scale;
+        const r = 90 * (1 - e) * scale;
+        const rx = rotX * (1 - e);
+        const ry = rotY * (1 - e);
+
+        if (w > 1 && h > 1) {
+          const points = getRoundedRectPoints(w, h, r);
+          const ax = rx * Math.PI / 180;
+          const ay = ry * Math.PI / 180;
+          const cosAy = Math.cos(ay), sinAy = Math.sin(ay);
+          const cosAx = Math.cos(ax), sinAx = Math.sin(ax);
+
+          pCtx.save();
+          pCtx.globalAlpha = canvasOpacity;
+          pCtx.beginPath();
+
+          points.forEach(([px, py], index) => {
+            const xx = px * cosAy;
+            const yy = py * cosAx;
+            const z = px * sinAy - py * sinAx;
+            const p = 850 / (850 + z);
+            const sx = cx + xx * p;
+            const sy = cy + yy * p;
+            if (index === 0) {
+              pCtx.moveTo(sx, sy);
+            } else {
+              pCtx.lineTo(sx, sy);
+            }
+          });
+
+          pCtx.closePath();
+          pCtx.clip();
+
+          // Viewport background behind clip
+          pCtx.fillStyle = '#030303';
+          pCtx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+
+          // Draw media in cover mode
+          const state = states[current];
+          const media = transitionActive
+            ? (proceduralTransition ? proceduralCanvas : transitionVideo)
+            : (state.image ? portalImage : portalVideo);
+
+          drawCover(pCtx, media);
+
+          if (transitionActive) {
+            drawShade(pCtx);
+          }
+
+          pCtx.restore();
+        }
+
+        requestAnimationFrame(draw);
+      }
+
+      // 9. PRELOADER SEQUENCE
+      let preloaderFinished = false;
+
+      function finishPreloader() {
+        if (preloaderFinished) return;
+        preloaderFinished = true;
+        preloaderVal.textContent = '100';
+        preloaderCount.classList.add('is-leaving');
+        floatingLogo.classList.add('is-docked');
+        preloader.remove();
+        document.body.classList.add('preload-complete');
+
+        startExperience();
+
+        setTimeout(() => {
+          preloaderCount.remove();
+        }, 750);
+
+        setTimeout(() => {
+          floatingLogo.classList.add('is-settled');
+        }, 2000);
+      }
+
+      function waitForStartupMedia(media, onProgress, timeout = 10000) {
+        return new Promise(resolve => {
+          let settled = false;
+          const isVideo = media.tagName === 'VIDEO';
+          const readyEvent = isVideo ? 'canplay' : 'load';
+          const errorEvent = 'error';
+          let reportedProgress = 10;
+
+          function reportProgress(value) {
+            reportedProgress = Math.max(reportedProgress, Math.min(99, value));
+            onProgress(reportedProgress);
+          }
+
+          function onMetadata() { reportProgress(20); }
+          function onData() { reportProgress(70); }
+          function onBufferProgress() {
+            if (!Number.isFinite(media.duration) || media.duration <= 0 || !media.buffered.length) return;
+            reportProgress(10 + Math.floor((media.buffered.end(0) / media.duration) * 89));
+          }
+
+          function done(ready) {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            media.removeEventListener(readyEvent, onReady);
+            media.removeEventListener(errorEvent, onError);
+            media.removeEventListener('loadedmetadata', onMetadata);
+            media.removeEventListener('loadeddata', onData);
+            media.removeEventListener('progress', onBufferProgress);
+            resolve(ready);
+          }
+
+          function onReady() { done(true); }
+          function onError() { done(false); }
+          const timer = setTimeout(() => done(false), timeout);
+
+          if (isVideo ? media.readyState >= 3 : (media.complete && media.naturalWidth > 0)) {
+            done(true);
+            return;
+          }
+
+          media.addEventListener(readyEvent, onReady, { once: true });
+          media.addEventListener(errorEvent, onError, { once: true });
+          if (isVideo) {
+            media.addEventListener('loadedmetadata', onMetadata);
+            media.addEventListener('loadeddata', onData);
+            media.addEventListener('progress', onBufferProgress);
+          }
+        });
+      }
+
+      async function runPreloader() {
+        const state = states[current];
+        const media = state.image ? portalImage : portalVideo;
+        preloaderVal.textContent = '10';
+        const mediaReady = await waitForStartupMedia(media, value => {
+          preloaderVal.textContent = String(value);
+        });
+
+        if (!mediaReady && media === portalVideo) {
+          renderProceduralPlanet(state.next.toLowerCase());
+          state.image = proceduralCanvas.toDataURL();
+          render();
+        }
+
+        preloaderVal.textContent = '100';
+        finishPreloader();
+      }
+
+      async function startExperience() {
+        await revealMask();
+        document.body.classList.add('intro-ready');
+        setTimeout(revealPlanetContent, 850);
+      }
+
+      // 10. OVERLAYS CONTROLLER (DOSSIER, COMPARE, PLANETS, ABOUT, MENU)
+      let lastFocusedElement = null;
+      let activeOverlay = null;
+
+      function closeAllOverlays() {
+        document.querySelectorAll('.app-overlay').forEach(el => {
+          el.classList.remove('is-open');
+          el.setAttribute('aria-hidden', 'true');
+          el.inert = true;
+        });
+        activeOverlay = null;
+        if (lastFocusedElement && lastFocusedElement.isConnected) {
+          lastFocusedElement.focus();
+        }
+        lastFocusedElement = null;
+      }
+
+      function openOverlay(overlayEl) {
+        if (!activeOverlay) lastFocusedElement = document.activeElement;
+        document.querySelectorAll('.app-overlay').forEach(el => {
+          el.classList.remove('is-open');
+          el.setAttribute('aria-hidden', 'true');
+          el.inert = true;
+        });
+        activeOverlay = overlayEl;
+        overlayEl.classList.add('is-open');
+        overlayEl.setAttribute('aria-hidden', 'false');
+        overlayEl.inert = false;
+        overlayEl.querySelector('button, select, input, textarea, a[href], [tabindex="0"]')?.focus();
+      }
+
+      // Open Dossier
+      function populateDossier(planetKey) {
+        const st = states[planetKey];
+        const d = st.dossier;
+        document.getElementById('dossier-num').textContent = st.number;
+        document.getElementById('dossier-title').textContent = st.name + ' — Astrophysics Dossier';
+        document.getElementById('dossier-summary').textContent = d.summary;
+        document.getElementById('dossier-diameter').textContent = d.diameterStr;
+        document.getElementById('dossier-gravity').textContent = d.gravityStr;
+        document.getElementById('dossier-day').textContent = d.dayLength;
+        document.getElementById('dossier-moons').textContent = String(d.moons);
+        document.getElementById('dossier-speed').textContent = d.orbitalSpeedStr;
+        document.getElementById('dossier-mass').textContent = d.mass;
+        document.getElementById('dossier-composition').textContent = d.composition;
+
+        const missionsEl = document.getElementById('dossier-missions');
+        missionsEl.innerHTML = '';
+        d.missions.forEach(m => {
+          const badge = document.createElement('span');
+          badge.style.cssText = 'background:rgba(255,255,255,0.12); padding:4px 10px; border-radius:999px; font-size:12px; border:1px solid rgba(255,255,255,0.2);';
+          badge.textContent = m;
+          missionsEl.appendChild(badge);
+        });
+      }
+
+      document.getElementById('open-dossier-btn').addEventListener('click', () => {
+        populateDossier(current);
+        openOverlay(dossierOverlay);
+      });
+      document.getElementById('close-dossier').addEventListener('click', closeAllOverlays);
+
+      // Planetary Comparison Engine
+      const selectP1 = document.getElementById('select-p1');
+      const selectP2 = document.getElementById('select-p2');
+
+      function initCompareSelectors() {
+        selectP1.innerHTML = '';
+        selectP2.innerHTML = '';
+        planets.forEach(p => {
+          const k = p.toLowerCase();
+          const opt1 = new Option(p, k);
+          const opt2 = new Option(p, k);
+          selectP1.add(opt1);
+          selectP2.add(opt2);
+        });
+        selectP1.value = current;
+        selectP2.value = (current === 'earth') ? 'mars' : 'earth';
+      }
+
+      function updateComparison() {
+        const k1 = selectP1.value;
+        const k2 = selectP2.value;
+        const p1 = states[k1];
+        const p2 = states[k2];
+
+        document.getElementById('compare-p1-title').textContent = p1.name;
+        document.getElementById('compare-p2-title').textContent = p2.name;
+
+        const maxDiam = 142984; // Jupiter
+        const maxGrav = 24.79;
+
+        function renderMetrics(planetState, containerId) {
+          const d = planetState.dossier;
+          const container = document.getElementById(containerId);
+          container.innerHTML = `
+            <div class="compare-metric">
+              <div class="compare-label"><span>Diameter</span><strong>${d.diameterKm.toLocaleString()} km</strong></div>
+              <div class="compare-bar-track"><div class="compare-bar-fill" style="width:${Math.round((d.diameterKm / maxDiam) * 100)}%;"></div></div>
+            </div>
+            <div class="compare-metric">
+              <div class="compare-label"><span>Surface Gravity</span><strong>${d.gravityVal} m/s²</strong></div>
+              <div class="compare-bar-track"><div class="compare-bar-fill" style="width:${Math.round((d.gravityVal / maxGrav) * 100)}%;"></div></div>
+            </div>
+            <div class="compare-metric">
+              <div class="compare-label"><span>Distance from Sun</span><strong>${d.distAu} AU</strong></div>
+              <div class="compare-bar-track"><div class="compare-bar-fill" style="width:${Math.min(100, Math.round((d.distAu / 30.1) * 100))}%;"></div></div>
+            </div>
+            <div class="compare-metric">
+              <div class="compare-label"><span>Day Duration</span><strong>${d.dayLength}</strong></div>
+            </div>
+            <div class="compare-metric">
+              <div class="compare-label"><span>Moons</span><strong>${d.moons}</strong></div>
+            </div>
+            <div class="compare-metric">
+              <div class="compare-label"><span>Temp Range</span><strong>${d.tempRange}</strong></div>
+            </div>
+          `;
+        }
+
+        renderMetrics(p1, 'compare-p1-metrics');
+        renderMetrics(p2, 'compare-p2-metrics');
+      }
+
+      selectP1.addEventListener('change', updateComparison);
+      selectP2.addEventListener('change', updateComparison);
+
+      document.getElementById('open-compare-btn').addEventListener('click', () => {
+        initCompareSelectors();
+        updateComparison();
+        openOverlay(compareOverlay);
+      });
+      document.getElementById('nav-compare').addEventListener('click', () => {
+        initCompareSelectors();
+        updateComparison();
+        openOverlay(compareOverlay);
+      });
+      document.getElementById('close-compare').addEventListener('click', closeAllOverlays);
+
+      // Planet Directory Modal
+      function populatePlanetDirectory() {
+        const grid = document.getElementById('planet-directory-grid');
+        grid.innerHTML = '';
+        planets.forEach(p => {
+          const k = p.toLowerCase();
+          const st = states[k];
+          const card = document.createElement('button');
+          card.type = 'button';
+          card.className = 'planet-card' + (k === current ? ' is-current' : '');
+          card.innerHTML = `
+            <span class="planet-card-number">${st.number}</span>
+            <span class="planet-card-name">${st.name}</span>
+            <span class="planet-card-stat">${st.dossier.diameterStr}</span>
+            <span class="planet-card-stat">☀️ ${st.dossier.distAu} AU</span>
+            <span class="planet-card-stat">🪐 ${st.dossier.moons} Moons</span>
+          `;
+          card.setAttribute('aria-current', k === current ? 'true' : 'false');
+          card.addEventListener('click', () => {
+            closeAllOverlays();
+            if (k !== current) {
+              warpToPlanet(k);
+            }
+          });
+          grid.appendChild(card);
+        });
+      }
+
+      document.getElementById('nav-planets').addEventListener('click', () => {
+        populatePlanetDirectory();
+        openOverlay(planetsOverlay);
+      });
+      document.getElementById('close-planets').addEventListener('click', closeAllOverlays);
+
+      // About Modal
+      document.getElementById('nav-about').addEventListener('click', () => {
+        openOverlay(aboutOverlay);
+      });
+      document.getElementById('close-about').addEventListener('click', closeAllOverlays);
+
+      // Menu / Flight Deck Modal
+      document.getElementById('menu-btn').addEventListener('click', () => {
+        openOverlay(menuOverlay);
+      });
+      document.getElementById('close-menu').addEventListener('click', closeAllOverlays);
+
+      document.getElementById('menu-audio-toggle').addEventListener('click', () => {
+        setAudioState(!audioEnabled);
+      });
+      document.getElementById('menu-eco-toggle').addEventListener('click', () => {
+        setEcoMode(!ecoMode);
+      });
+      document.getElementById('menu-reset-btn').addEventListener('click', () => {
+        closeAllOverlays();
+        warpToPlanet('mercury');
+      });
+
+      // Nav Explore Button (returns to main view)
+      document.getElementById('nav-explore').addEventListener('click', (e) => {
+        e.preventDefault();
+        closeAllOverlays();
+      });
+
+      // 11. ACCESSIBILITY & KEYBOARD SHORTCUTS
+      window.addEventListener('keydown', e => {
+        // Dismiss modals on Escape
+        if (e.key === 'Escape') {
+          closeAllOverlays();
+          return;
+        }
+
+        if (e.key === 'Tab' && activeOverlay) {
+          const focusable = [...activeOverlay.querySelectorAll('button:not([disabled]), select:not([disabled]), input:not([disabled]), textarea:not([disabled]), a[href], [tabindex="0"]')];
+          if (!focusable.length) {
+            e.preventDefault();
+            return;
+          }
+          const first = focusable[0];
+          const last = focusable[focusable.length - 1];
+          if (e.shiftKey && (document.activeElement === first || !activeOverlay.contains(document.activeElement))) {
+            e.preventDefault();
+            last.focus();
+          } else if (!e.shiftKey && (document.activeElement === last || !activeOverlay.contains(document.activeElement))) {
+            e.preventDefault();
+            first.focus();
+          }
+          return;
+        }
+
+        // Ignore shortcuts if focusing an input/select
+        if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+          return;
+        }
+
+        if (e.code === 'Space') {
+          e.preventDefault();
+          travelNext();
+        } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+          e.preventDefault();
+          travelNext();
+        } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          travelPrev();
+        } else if (e.key === 'm' || e.key === 'M') {
+          setAudioState(!audioEnabled);
+        } else if (e.key === 'p' || e.key === 'P') {
+          setEcoMode(!ecoMode);
+        }
+      });
+
+      // 12. PWA SERVICE WORKER REGISTRATION
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(() => {});
+        });
+      }
+
+      // 13. BOOT SEQUENCE
+      document.querySelectorAll('.background').forEach(bg => {
+        bg.pause();
+        bg.currentTime = 0;
+      });
+      closeAllOverlays();
+      resizeCanvas();
+      render();
+      if (audioEnabled) {
+        setAudioState(true);
+      }
+      requestAnimationFrame(draw);
+      requestAnimationFrame(cursorLoop);
+      runPreloader();
+    })();
+  </script>
+</body>
+</html>
