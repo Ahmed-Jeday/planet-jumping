@@ -896,7 +896,14 @@
 <body>
   <main class="experience" data-planet="mars">
     <div class="backgrounds" aria-hidden="true">
-      <video id="mars-background" class="background is-visible" src="/assets/mars-background.mp4" muted playsinline loop preload="none"></video>
+      <video id="mercury-background" class="background" src="/assets/to-Mercury.mp4" muted playsinline preload="auto"></video>
+      <video id="venus-background" class="background" src="/assets/to-venus.mp4" muted playsinline preload="auto"></video>
+      <video id="earth-background" class="background" src="/assets/to-earth.mp4" muted playsinline preload="auto"></video>
+      <video id="mars-background" class="background is-visible" src="/assets/mars-background.mp4" muted playsinline preload="auto"></video>
+      <video id="jupiter-background" class="background" src="/assets/to-Jupiter.mp4" muted playsinline preload="auto"></video>
+      <video id="saturn-background" class="background" src="/assets/to-Saturn.mp4" muted playsinline preload="auto"></video>
+      <video id="uranus-background" class="background" src="/assets/to-Uranus.mp4" muted playsinline preload="auto"></video>
+      <video id="neptune-background" class="background" src="/assets/to-Neptune.mp4" muted playsinline preload="auto"></video>
     </div>
     <div class="preloader" id="preloader" aria-label="Loading Solar Odyssey">
       <div class="preloader-shade"></div>
@@ -933,7 +940,7 @@
         <span><span id="next-number">[03]</span> <strong id="next-name">Earth</strong></span>
       </div>
       <button class="portal" id="portal" type="button" aria-label="Travel to next destination" title="Click or Press Space to Warp" >
-        <video id="portal-video" src="/assets/to-earth.mp4" muted playsinline preload="none"></video>
+        <video id="portal-video" src="/assets/to-earth.mp4" muted playsinline preload="auto" ></video>
         <img id="portal-image" src="/assets/mercury.jpg" alt="Mercury">
       </button>
     </section>
@@ -953,7 +960,7 @@
       <dl id="facts"></dl>
     </section>
 
-    <div class="transition-layer" aria-hidden="true"><video id="transition-video" muted playsinline preload="none" crossorigin="anonymous"></video></div>
+    <div class="transition-layer" aria-hidden="true"><video id="transition-video" muted playsinline preload="auto" crossorigin="anonymous"></video></div>
     <div class="loading" aria-hidden="true">Calculating Orbital Vector…</div>
     <div class="custom-cursor" aria-hidden="true">
       <span class="cursor-orbit"></span><span class="cursor-dot"></span><span class="cursor-label">Warp</span>
@@ -1421,7 +1428,6 @@
 
       let busy = false;
       let transitionActive = false;
-      let proceduralTransition = false;
       let expansion = 0;
       let maskScale = 1;
       let canvasOpacity = 1;
@@ -1837,7 +1843,6 @@
         busy = true;
         targetX = 0;
         targetY = 0;
-        proceduralTransition = false;
 
         playWarpSound();
         const sourceUrl = planetVideos[targetPlanetKey];
@@ -1866,28 +1871,17 @@
           canvasOpacity = 0;               // départ invisible
           transitionActive = true;
 
-          let transitionPlayed = false;
-          try {
-            await transitionVideo.play();
-            transitionPlayed = true;
-          } catch (err) {
-            proceduralTransition = true;
-            renderProceduralPlanet(targetPlanetKey);
-            console.warn('Transition video unavailable; using procedural fallback:', err);
-          }
+          await transitionVideo.play().catch(() => {});
           await Promise.all([
             animateValue(v => { expansion = v; }, 1100),      // agrandissement
             animateValue(v => { canvasOpacity = v; }, 600)    // fondu 0 → 1
 ]);
 
-          if (transitionPlayed) {
-            await new Promise(resolve => {
-              if (transitionVideo.ended || transitionVideo.error) return resolve();
-              transitionVideo.addEventListener('ended', resolve, { once: true });
-              transitionVideo.addEventListener('error', resolve, { once: true });
-              setTimeout(resolve, 6000);
-            });
-          }
+          await new Promise(resolve => {
+            if (transitionVideo.ended) return resolve();
+            transitionVideo.addEventListener('ended', resolve, { once: true });
+            setTimeout(resolve, 6000);
+          });
 
           // Freeze final frame into scene canvas
         // Freeze final frame into scene canvas
@@ -1898,9 +1892,10 @@
             sceneCanvas.style.height = window.innerHeight + 'px';
             sCtx.setTransform(d, 0, 0, d, 0, 0);
             sCtx.clearRect(0, 0, window.innerWidth, window.innerHeight);
-            if (transitionPlayed && !transitionVideo.error && transitionVideo.readyState >= 2) {
+            if (transitionVideo.readyState >= 2) {
               drawCover(sCtx, transitionVideo);
             } else {
+              // Vidéo non chargée : fond procédural au lieu du noir
               renderProceduralPlanet(targetPlanetKey);
               drawCover(sCtx, proceduralCanvas);
             }
@@ -1913,7 +1908,6 @@
           await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
           transitionActive = false;
-          proceduralTransition = false;
           expansion = 0;
           maskScale = 0;
           canvasOpacity = 1;
@@ -1931,7 +1925,6 @@
 }, 450);
         } catch (err) {
           transitionActive = false;
-          proceduralTransition = false;
           expansion = 0;
           maskScale = 1;
           canvasOpacity = 1;
@@ -2082,7 +2075,7 @@
           // Draw media in cover mode
           const state = states[current];
           const media = transitionActive
-            ? (proceduralTransition ? proceduralCanvas : transitionVideo)
+            ? transitionVideo
             : (state.image ? portalImage : portalVideo);
 
           drawCover(pCtx, media);
@@ -2120,110 +2113,55 @@
         }, 2000);
       }
 
-      function waitForStartupMedia(media, onProgress, timeout = 10000) {
-        return new Promise(resolve => {
-          let settled = false;
-          const isVideo = media.tagName === 'VIDEO';
-          const readyEvent = isVideo ? 'canplay' : 'load';
-          const errorEvent = 'error';
-          let reportedProgress = 10;
+      function runPreloader() {
+        let pct = 0;
 
-          function reportProgress(value) {
-            reportedProgress = Math.max(reportedProgress, Math.min(99, value));
-            onProgress(reportedProgress);
+        function updateCount() {
+          if (preloaderFinished) return;
+          pct = Math.min(100, pct + 12);
+          preloaderVal.textContent = String(pct);
+
+          if (pct < 100) {
+            requestAnimationFrame(updateCount);
+          } else {
+            finishPreloader();
           }
-
-          function onMetadata() { reportProgress(20); }
-          function onData() { reportProgress(70); }
-          function onBufferProgress() {
-            if (!Number.isFinite(media.duration) || media.duration <= 0 || !media.buffered.length) return;
-            reportProgress(10 + Math.floor((media.buffered.end(0) / media.duration) * 89));
-          }
-
-          function done(ready) {
-            if (settled) return;
-            settled = true;
-            clearTimeout(timer);
-            media.removeEventListener(readyEvent, onReady);
-            media.removeEventListener(errorEvent, onError);
-            media.removeEventListener('loadedmetadata', onMetadata);
-            media.removeEventListener('loadeddata', onData);
-            media.removeEventListener('progress', onBufferProgress);
-            resolve(ready);
-          }
-
-          function onReady() { done(true); }
-          function onError() { done(false); }
-          const timer = setTimeout(() => done(false), timeout);
-
-          if (isVideo ? media.readyState >= 3 : (media.complete && media.naturalWidth > 0)) {
-            done(true);
-            return;
-          }
-
-          media.addEventListener(readyEvent, onReady, { once: true });
-          media.addEventListener(errorEvent, onError, { once: true });
-          if (isVideo) {
-            media.addEventListener('loadedmetadata', onMetadata);
-            media.addEventListener('loadeddata', onData);
-            media.addEventListener('progress', onBufferProgress);
-          }
-        });
-      }
-
-      async function runPreloader() {
-        const state = states[current];
-        const media = state.image ? portalImage : portalVideo;
-        preloaderVal.textContent = '10';
-        const mediaReady = await waitForStartupMedia(media, value => {
-          preloaderVal.textContent = String(value);
-        });
-
-        if (!mediaReady && media === portalVideo) {
-          renderProceduralPlanet(state.next.toLowerCase());
-          state.image = proceduralCanvas.toDataURL();
-          render();
         }
 
-        preloaderVal.textContent = '100';
-        finishPreloader();
+        requestAnimationFrame(updateCount);
+        setTimeout(finishPreloader, 1400);
       }
 
       async function startExperience() {
+        const state = states[current];
+        const media = state.image ? portalImage : portalVideo;
+
+        await new Promise(resolve => {
+          if (media.tagName === 'IMG') {
+            if (media.complete) return resolve();
+            media.addEventListener('load', resolve, { once: true });
+            media.addEventListener('error', resolve, { once: true });
+          } else {
+            if (media.readyState >= 2) return resolve();
+            media.addEventListener('canplay', resolve, { once: true });
+            media.addEventListener('error', resolve, { once: true });
+          }
+          setTimeout(resolve, 800);
+        });
+
         await revealMask();
         document.body.classList.add('intro-ready');
         setTimeout(revealPlanetContent, 850);
       }
 
       // 10. OVERLAYS CONTROLLER (DOSSIER, COMPARE, PLANETS, ABOUT, MENU)
-      let lastFocusedElement = null;
-      let activeOverlay = null;
-
       function closeAllOverlays() {
-        document.querySelectorAll('.app-overlay').forEach(el => {
-          el.classList.remove('is-open');
-          el.setAttribute('aria-hidden', 'true');
-          el.inert = true;
-        });
-        activeOverlay = null;
-        if (lastFocusedElement && lastFocusedElement.isConnected) {
-          lastFocusedElement.focus();
-        }
-        lastFocusedElement = null;
+        document.querySelectorAll('.app-overlay').forEach(el => el.classList.remove('is-open'));
       }
 
       function openOverlay(overlayEl) {
-        if (!activeOverlay) lastFocusedElement = document.activeElement;
-        document.querySelectorAll('.app-overlay').forEach(el => {
-          el.classList.remove('is-open');
-          el.setAttribute('aria-hidden', 'true');
-          el.inert = true;
-        });
-        activeOverlay = overlayEl;
+        closeAllOverlays();
         overlayEl.classList.add('is-open');
-        overlayEl.setAttribute('aria-hidden', 'false');
-        overlayEl.inert = false;
-        overlayEl.querySelector('button, select, input, textarea, a[href], [tabindex="0"]')?.focus();
       }
 
       // Open Dossier
@@ -2341,17 +2279,15 @@
         planets.forEach(p => {
           const k = p.toLowerCase();
           const st = states[k];
-          const card = document.createElement('button');
-          card.type = 'button';
+          const card = document.createElement('div');
           card.className = 'planet-card' + (k === current ? ' is-current' : '');
           card.innerHTML = `
             <span class="planet-card-number">${st.number}</span>
-            <span class="planet-card-name">${st.name}</span>
-            <span class="planet-card-stat">${st.dossier.diameterStr}</span>
-            <span class="planet-card-stat">☀️ ${st.dossier.distAu} AU</span>
-            <span class="planet-card-stat">🪐 ${st.dossier.moons} Moons</span>
+            <h3 class="planet-card-name">${st.name}</h3>
+            <div class="planet-card-stat">${st.dossier.diameterStr}</div>
+            <div class="planet-card-stat">☀️ ${st.dossier.distAu} AU</div>
+            <div class="planet-card-stat">🪐 ${st.dossier.moons} Moons</div>
           `;
-          card.setAttribute('aria-current', k === current ? 'true' : 'false');
           card.addEventListener('click', () => {
             closeAllOverlays();
             if (k !== current) {
@@ -2405,24 +2341,6 @@
           return;
         }
 
-        if (e.key === 'Tab' && activeOverlay) {
-          const focusable = [...activeOverlay.querySelectorAll('button:not([disabled]), select:not([disabled]), input:not([disabled]), textarea:not([disabled]), a[href], [tabindex="0"]')];
-          if (!focusable.length) {
-            e.preventDefault();
-            return;
-          }
-          const first = focusable[0];
-          const last = focusable[focusable.length - 1];
-          if (e.shiftKey && (document.activeElement === first || !activeOverlay.contains(document.activeElement))) {
-            e.preventDefault();
-            last.focus();
-          } else if (!e.shiftKey && (document.activeElement === last || !activeOverlay.contains(document.activeElement))) {
-            e.preventDefault();
-            first.focus();
-          }
-          return;
-        }
-
         // Ignore shortcuts if focusing an input/select
         if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
           return;
@@ -2456,7 +2374,6 @@
         bg.pause();
         bg.currentTime = 0;
       });
-      closeAllOverlays();
       resizeCanvas();
       render();
       if (audioEnabled) {
